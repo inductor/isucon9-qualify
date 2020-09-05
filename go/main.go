@@ -130,7 +130,8 @@ type ItemDetail struct {
 	TransactionEvidenceID     int64       `json:"transaction_evidence_id,omitempty" db:"transaction_evidence_id"`
 	TransactionEvidenceStatus string      `json:"transaction_evidence_status,omitempty" db:"transaction_evidence_status"`
 	ShippingStatus            string      `json:"shipping_status,omitempty" db:"shipping_status"`
-	CreatedAt                 int64       `json:"created_at" db:"created_at"`
+	CreatedAtTime             time.Time   `json:"-" db:"created_at"`
+	CreatedAt                 int64       `json:"created_at" db:"-"`
 }
 
 type TransactionEvidence struct {
@@ -974,6 +975,10 @@ FROM   (SELECT items.id                             AS "id",
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
 			return
 		}
+	}
+
+	for _, i := range itemDetails {
+		i.CreatedAt = i.CreatedAtTime.Unix()
 	}
 
 	//for _, item := range items {
