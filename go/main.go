@@ -117,16 +117,16 @@ type ItemSimple struct {
 type ItemDetail struct {
 	ID                        int64       `json:"id"`
 	SellerID                  int64       `json:"seller_id"`
-	Seller                    *UserSimple `json:"seller"`
+	Seller                    *UserSimple `json:"seller" db:"users"`
 	BuyerID                   int64       `json:"buyer_id,omitempty"`
-	Buyer                     *UserSimple `json:"buyer,omitempty"`
+	Buyer                     *UserSimple `json:"buyer,omitempty" db:"users"`
 	Status                    string      `json:"status"`
 	Name                      string      `json:"name"`
 	Price                     int         `json:"price"`
 	Description               string      `json:"description"`
 	ImageURL                  string      `json:"image_url"`
 	CategoryID                int         `json:"category_id"`
-	Category                  *Category   `json:"category"`
+	Category                  *Category   `json:"category" db:"categories"`
 	TransactionEvidenceID     int64       `json:"transaction_evidence_id,omitempty"`
 	TransactionEvidenceStatus string      `json:"transaction_evidence_status,omitempty"`
 	ShippingStatus            string      `json:"shipping_status,omitempty"`
@@ -897,12 +897,44 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sql := `
+SELECT items.id               AS "id",
+       items.seller_id        AS "seller_id",
+       items.buyer_id         AS "buyer_id",
+       items.status           AS "status",
+       items.name             AS "name",
+       items.category_id      AS "category_id",
+       items.created_at       AS "created_at",
+       c.id                   AS "categories.id",
+       c.parent_id            AS "categories.parent_id",
+       c.category_name        AS "categories.name",
+       c.parent_category_name AS "categories.parent_category_name",
+       te.id                  AS "transaction_evidence_id",
+       te.status              AS "transaction_evidence_status",
+       sh.status              AS "shipping_status"
+FROM   items
+       INNER JOIN users
+               ON ( items.seller_id = users.id
+                     OR items.buyer_id = users.id )
+       INNER JOIN (SELECT a.id,
+                          a.category_name,
+                          b.category_name AS parent_category_name
+                   FROM   categories AS a
+                          INNER JOIN categories AS b
+                                  ON a.parent_id = b.id)AS c
+               ON items.category_id = c.id
+       INNER JOIN transaction_evidences AS te
+               ON items.id = te.item_id
+       INNER JOIN shippings AS sh
+               ON sh.transaction_evidence_id = te.id
+`
+
 	tx := dbx
-	items := []Item{}
+	itemDetails := []ItemDetail{}
 	if itemID > 0 && createdAt > 0 {
 		// paging
-		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?)) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+		err := tx.Select(&itemDetails,
+			sql+" WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?)) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
 			user.ID,
 			user.ID,
 			time.Unix(createdAt, 0),
@@ -917,8 +949,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// 1st page
-		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+		err := tx.Select(&itemDetails,
+			sql+" WHERE (`seller_id` = ? OR `buyer_id` = ?) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
 			user.ID,
 			user.ID,
 			TransactionsPerPage+1,
@@ -930,85 +962,84 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	itemDetails := []ItemDetail{}
-	for _, item := range items {
-		seller, err := getUserSimpleByID(tx, item.SellerID)
-		if err != nil {
-			outputErrorMsg(w, http.StatusNotFound, "seller not found")
-			return
-		}
-		category, err := getCategoryByID(tx, item.CategoryID)
-		if err != nil {
-			outputErrorMsg(w, http.StatusNotFound, "category not found")
-			return
-		}
+	//for _, item := range items {
+	//	seller, err := getUserSimpleByID(tx, item.SellerID)
+	//	if err != nil {
+	//		outputErrorMsg(w, http.StatusNotFound, "seller not found")
+	//		return
+	//	}
+	//	category, err := getCategoryByID(tx, item.CategoryID)
+	//	if err != nil {
+	//		outputErrorMsg(w, http.StatusNotFound, "category not found")
+	//		return
+	//	}
 
-		itemDetail := ItemDetail{
-			ID:       item.ID,
-			SellerID: item.SellerID,
-			Seller:   &seller,
-			// BuyerID
-			// Buyer
-			Status:      item.Status,
-			Name:        item.Name,
-			Price:       item.Price,
-			Description: item.Description,
-			ImageURL:    getImageURL(item.ImageName),
-			CategoryID:  item.CategoryID,
-			// TransactionEvidenceID
-			// TransactionEvidenceStatus
-			// ShippingStatus
-			Category:  &category,
-			CreatedAt: item.CreatedAt.Unix(),
-		}
+	//	itemDetail := ItemDetail{
+	//		ID:       item.ID,
+	//		SellerID: item.SellerID,
+	//		Seller:   &seller,
+	//		// BuyerID
+	//		// Buyer
+	//		Status:      item.Status,
+	//		Name:        item.Name,
+	//		Price:       item.Price,
+	//		Description: item.Description,
+	//		ImageURL:    getImageURL(item.ImageName),
+	//		CategoryID:  item.CategoryID,
+	//		// TransactionEvidenceID
+	//		// TransactionEvidenceStatus
+	//		// ShippingStatus
+	//		Category:  &category,
+	//		CreatedAt: item.CreatedAt.Unix(),
+	//	}
 
-		if item.BuyerID != 0 {
-			buyer, err := getUserSimpleByID(tx, item.BuyerID)
-			if err != nil {
-				outputErrorMsg(w, http.StatusNotFound, "buyer not found")
-				return
-			}
-			itemDetail.BuyerID = item.BuyerID
-			itemDetail.Buyer = &buyer
-		}
+	//	if item.BuyerID != 0 {
+	//		buyer, err := getUserSimpleByID(tx, item.BuyerID)
+	//		if err != nil {
+	//			outputErrorMsg(w, http.StatusNotFound, "buyer not found")
+	//			return
+	//		}
+	//		itemDetail.BuyerID = item.BuyerID
+	//		itemDetail.Buyer = &buyer
+	//	}
 
-		transactionEvidence := TransactionEvidence{}
-		err = tx.Get(&transactionEvidence, "SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", item.ID)
-		if err != nil && err != sql.ErrNoRows {
-			// It's able to ignore ErrNoRows
-			log.Print(err)
-			outputErrorMsg(w, http.StatusInternalServerError, "db error")
-			return
-		}
+	//	transactionEvidence := TransactionEvidence{}
+	//	err = tx.Get(&transactionEvidence, "SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", item.ID)
+	//	if err != nil && err != sql.ErrNoRows {
+	//		// It's able to ignore ErrNoRows
+	//		log.Print(err)
+	//		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	//		return
+	//	}
 
-		if transactionEvidence.ID > 0 {
-			shipping := Shipping{}
-			err = tx.Get(&shipping, "SELECT * FROM `shippings` WHERE `transaction_evidence_id` = ?", transactionEvidence.ID)
-			if err == sql.ErrNoRows {
-				outputErrorMsg(w, http.StatusNotFound, "shipping not found")
-				return
-			}
-			if err != nil {
-				log.Print(err)
-				outputErrorMsg(w, http.StatusInternalServerError, "db error")
-				return
-			}
-			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
-				ReserveID: shipping.ReserveID,
-			})
-			if err != nil {
-				log.Print(err)
-				outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
-				return
-			}
+	//	if transactionEvidence.ID > 0 {
+	//		shipping := Shipping{}
+	//		err = tx.Get(&shipping, "SELECT * FROM `shippings` WHERE `transaction_evidence_id` = ?", transactionEvidence.ID)
+	//		if err == sql.ErrNoRows {
+	//			outputErrorMsg(w, http.StatusNotFound, "shipping not found")
+	//			return
+	//		}
+	//		if err != nil {
+	//			log.Print(err)
+	//			outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	//			return
+	//		}
+	//		ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
+	//			ReserveID: shipping.ReserveID,
+	//		})
+	//		if err != nil {
+	//			log.Print(err)
+	//			outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
+	//			return
+	//		}
 
-			itemDetail.TransactionEvidenceID = transactionEvidence.ID
-			itemDetail.TransactionEvidenceStatus = transactionEvidence.Status
-			itemDetail.ShippingStatus = ssr.Status
-		}
+	//		itemDetail.TransactionEvidenceID = transactionEvidence.ID
+	//		itemDetail.TransactionEvidenceStatus = transactionEvidence.Status
+	//		itemDetail.ShippingStatus = ssr.Status
+	//	}
 
-		itemDetails = append(itemDetails, itemDetail)
-	}
+	//	itemDetails = append(itemDetails, itemDetail)
+	//}
 
 	hasNext := false
 	if len(itemDetails) > TransactionsPerPage {
