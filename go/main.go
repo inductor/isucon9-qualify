@@ -924,7 +924,7 @@ FROM   (SELECT items.id                             AS "id",
                te.status                            AS "transaction_evidence_status",
                sh.status                            AS "shipping_status"
         FROM   items
-               LEFT JOIN (SELECT *
+               INNER JOIN (SELECT *
                           FROM   users) AS seller_user
                       ON items.seller_id = seller_user.id
                LEFT JOIN (SELECT *
