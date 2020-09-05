@@ -921,7 +921,7 @@ FROM   (SELECT items.id                             AS "id",
                "buyer_user.num_sell_items",
                c.id                                 AS "categories.id",
                c.parent_id                          AS "categories.parent_id",
-               c.category_name                      AS "categories.name",
+               c.category_name                      AS "categories.category_name",
                c.parent_category_name               AS
                       "categories.parent_category_name",
                te.id                                AS "transaction_evidence_id"
