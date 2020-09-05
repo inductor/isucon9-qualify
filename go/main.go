@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/daisuzu/callcache"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/newrelic/go-agent/v3/integrations/nrmysql"
@@ -427,12 +428,19 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
+var userSimpleDispatcher = callcache.NewDispatcher(1*time.Minute, 10*time.Second)
+
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
-	user := User{}
-	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+	v, err := userSimpleDispatcher.Do(strconv.FormatInt(userID, 10), func() (interface{}, error) {
+		var user User
+		err := sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+		return user, err
+	})
 	if err != nil {
 		return userSimple, err
 	}
+
+	user := v.(User)
 	userSimple.ID = user.ID
 	userSimple.AccountName = user.AccountName
 	userSimple.NumSellItems = user.NumSellItems
