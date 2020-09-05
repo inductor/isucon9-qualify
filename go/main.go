@@ -168,7 +168,7 @@ type Category struct {
 	ID                 int    `json:"id" db:"id"`
 	ParentID           int    `json:"parent_id" db:"parent_id"`
 	CategoryName       string `json:"category_name" db:"category_name"`
-	ParentCategoryName string `json:"parent_category_name,omitempty" db:"-"`
+	ParentCategoryName string `json:"parent_category_name,omitempty" db:"parent_category_name"`
 }
 
 type reqInitialize struct {
@@ -910,24 +910,17 @@ FROM   (SELECT items.id                             AS "id",
                items.category_id                    AS "category_id",
                items.created_at                     AS "created_at",
                seller_user.id                       AS "seller_user.id",
-               seller_user.account_name             AS
-               "seller_user.account_name",
-               seller_user.num_sell_items           AS
-               "seller_user.num_sell_items",
+               seller_user.account_name             AS "seller_user.account_name",
+               seller_user.num_sell_items           AS "seller_user.num_sell_items",
                buyer_user.id                        AS "buyer_user.id",
-               buyer_user.account_name              AS "buyer_user.account_name"
-               ,
-               buyer_user.num_sell_items            AS
-               "buyer_user.num_sell_items",
+               buyer_user.account_name              AS "buyer_user.account_name" ,
+               buyer_user.num_sell_items            AS "buyer_user.num_sell_items",
                c.id                                 AS "categories.id",
                c.parent_id                          AS "categories.parent_id",
                c.category_name                      AS "categories.category_name",
-               c.parent_category_name               AS
-                      "categories.parent_category_name",
-               te.id                                AS "transaction_evidence_id"
-               ,
-               te.status                            AS
-               "transaction_evidence_status",
+               c.parent_category_name               AS "categories.parent_category_name",
+               te.id                                AS "transaction_evidence_id" ,
+               te.status                            AS "transaction_evidence_status",
                sh.status                            AS "shipping_status"
         FROM   items
                LEFT JOIN (SELECT *
