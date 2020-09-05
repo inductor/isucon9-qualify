@@ -428,7 +428,7 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
-var userSimpleDispatcher = callcache.NewDispatcher(1*time.Minute, 10*time.Second)
+var userSimpleDispatcher = callcache.NewDispatcher(1*time.Minute, 1*time.Second)
 
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
 	v, err := userSimpleDispatcher.Do(strconv.FormatInt(userID, 10), func() (interface{}, error) {
