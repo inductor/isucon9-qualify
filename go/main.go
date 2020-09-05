@@ -115,22 +115,22 @@ type ItemSimple struct {
 }
 
 type ItemDetail struct {
-	ID                        int64       `json:"id"`
-	SellerID                  int64       `json:"seller_id"`
+	ID                        int64       `json:"id" db:"id"`
+	SellerID                  int64       `json:"seller_id" db:"seller_id"`
 	Seller                    *UserSimple `json:"seller" db:"seller_user"`
-	BuyerID                   int64       `json:"buyer_id,omitempty"`
+	BuyerID                   int64       `json:"buyer_id,omitempty" db:"buyer_id"`
 	Buyer                     *UserSimple `json:"buyer,omitempty" db:"buyer_user"`
-	Status                    string      `json:"status"`
-	Name                      string      `json:"name"`
-	Price                     int         `json:"price"`
-	Description               string      `json:"description"`
-	ImageURL                  string      `json:"image_url"`
-	CategoryID                int         `json:"category_id"`
+	Status                    string      `json:"status" db:"status"`
+	Name                      string      `json:"name" db:"name"`
+	Price                     int         `json:"price" db:"price"`
+	Description               string      `json:"description" db:"description"`
+	ImageURL                  string      `json:"image_url" db:"image_url"`
+	CategoryID                int         `json:"category_id" db:"category_id"`
 	Category                  *Category   `json:"category" db:"categories"`
-	TransactionEvidenceID     int64       `json:"transaction_evidence_id,omitempty"`
-	TransactionEvidenceStatus string      `json:"transaction_evidence_status,omitempty"`
-	ShippingStatus            string      `json:"shipping_status,omitempty"`
-	CreatedAt                 int64       `json:"created_at"`
+	TransactionEvidenceID     int64       `json:"transaction_evidence_id,omitempty" db:"transaction_evidence_id"`
+	TransactionEvidenceStatus string      `json:"transaction_evidence_status,omitempty" db:"transaction_evidence_status"`
+	ShippingStatus            string      `json:"shipping_status,omitempty" db:"shipping_status"`
+	CreatedAt                 int64       `json:"created_at" db:"created_at"`
 }
 
 type TransactionEvidence struct {
@@ -899,26 +899,36 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 	sql := `
 SELECT *
-FROM   (SELECT items.id                   AS "id",
-               items.seller_id            AS "seller_id",
-               items.buyer_id             AS "buyer_id",
-               items.status               AS "status",
-               items.name                 AS "name",
-               items.category_id          AS "category_id",
-               items.created_at           AS "created_at",
-               seller_user.id             AS "seller_user.id",
-               seller_user.account_name   AS "seller_user.account_name",
-               seller_user.num_sell_items AS "seller_user.num_sell_items",
-               buyer_user.id              AS "buyer_user.id",
-               buyer_user.account_name    AS "buyer_user.account_name",
-               buyer_user.num_sell_items  AS "buyer_user.num_sell_items",
-               c.id                       AS "categories.id",
-               c.parent_id                AS "categories.parent_id",
-               c.category_name            AS "categories.name",
-               c.parent_category_name     AS "categories.parent_category_name",
-               te.id                      AS "transaction_evidence_id",
-               te.status                  AS "transaction_evidence_status",
-               sh.status                  AS "shipping_status"
+FROM   (SELECT items.id                             AS "id",
+               items.seller_id                      AS "seller_id",
+               items.buyer_id                       AS "buyer_id",
+               items.status                         AS "status",
+               items.name                           AS "name",
+               items.price                          AS "price",
+               items.description                    AS "description",
+               Concat("/upload/", items.image_name) AS "image_url",
+               items.category_id                    AS "category_id",
+               items.created_at                     AS "created_at",
+               seller_user.id                       AS "seller_user.id",
+               seller_user.account_name             AS
+               "seller_user.account_name",
+               seller_user.num_sell_items           AS
+               "seller_user.num_sell_items",
+               buyer_user.id                        AS "buyer_user.id",
+               buyer_user.account_name              AS "buyer_user.account_name"
+               ,
+               buyer_user.num_sell_items            AS
+               "buyer_user.num_sell_items",
+               c.id                                 AS "categories.id",
+               c.parent_id                          AS "categories.parent_id",
+               c.category_name                      AS "categories.name",
+               c.parent_category_name               AS
+                      "categories.parent_category_name",
+               te.id                                AS "transaction_evidence_id"
+               ,
+               te.status                            AS
+               "transaction_evidence_status",
+               sh.status                            AS "shipping_status"
         FROM   items
                LEFT JOIN (SELECT *
                           FROM   users) AS seller_user
