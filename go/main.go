@@ -511,19 +511,19 @@ func getConfigByName(name string) (string, error) {
 }
 
 func getPaymentServiceURL() string {
-	val, _ := getConfigByName("payment_service_url")
-	if val == "" {
-		return DefaultPaymentServiceURL
-	}
-	return val
+	// val, _ := getConfigByName("payment_service_url")
+	// if val == "" {
+	// 	return DefaultPaymentServiceURL
+	// }
+	return DefaultPaymentServiceURL
 }
 
 func getShipmentServiceURL() string {
-	val, _ := getConfigByName("shipment_service_url")
-	if val == "" {
-		return DefaultShipmentServiceURL
-	}
-	return val
+	// val, _ := getConfigByName("shipment_service_url")
+	// if val == "" {
+	// 	return DefaultShipmentServiceURL
+	// }
+	return DefaultShipmentServiceURL
 }
 
 func getIndex(w http.ResponseWriter, r *http.Request) {
@@ -548,30 +548,30 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = dbx.Exec(
-		"INSERT INTO `configs` (`name`, `val`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `val` = VALUES(`val`)",
-		"payment_service_url",
-		ri.PaymentServiceURL,
-	)
-	if err != nil {
-		log.Print(err)
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
-	_, err = dbx.Exec(
-		"INSERT INTO `configs` (`name`, `val`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `val` = VALUES(`val`)",
-		"shipment_service_url",
-		ri.ShipmentServiceURL,
-	)
-	if err != nil {
-		log.Print(err)
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
+	// _, err = dbx.Exec(
+	// 	"INSERT INTO `configs` (`name`, `val`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `val` = VALUES(`val`)",
+	// 	"payment_service_url",
+	// 	ri.PaymentServiceURL,
+	// )
+	// if err != nil {
+	// 	log.Print(err)
+	// 	outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	// 	return
+	// }
+	// _, err = dbx.Exec(
+	// 	"INSERT INTO `configs` (`name`, `val`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `val` = VALUES(`val`)",
+	// 	"shipment_service_url",
+	// 	ri.ShipmentServiceURL,
+	// )
+	// if err != nil {
+	// 	log.Print(err)
+	// 	outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	// 	return
+	// }
 
 	res := resInitialize{
 		// キャンペーン実施時には還元率の設定を返す。詳しくはマニュアルを参照のこと。
-		Campaign: 0,
+		Campaign: 1,
 		// 実装言語を返す
 		Language: "Go",
 	}
