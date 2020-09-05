@@ -117,9 +117,9 @@ type ItemSimple struct {
 type ItemDetail struct {
 	ID                        int64       `json:"id"`
 	SellerID                  int64       `json:"seller_id"`
-	Seller                    *UserSimple `json:"seller" db:"users"`
+	Seller                    *UserSimple `json:"seller" db:"seller_user"`
 	BuyerID                   int64       `json:"buyer_id,omitempty"`
-	Buyer                     *UserSimple `json:"buyer,omitempty" db:"users"`
+	Buyer                     *UserSimple `json:"buyer,omitempty" db:"buyer_user"`
 	Status                    string      `json:"status"`
 	Name                      string      `json:"name"`
 	Price                     int         `json:"price"`
@@ -898,35 +898,46 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sql := `
-SELECT items.id               AS "id",
-       items.seller_id        AS "seller_id",
-       items.buyer_id         AS "buyer_id",
-       items.status           AS "status",
-       items.name             AS "name",
-       items.category_id      AS "category_id",
-       items.created_at       AS "created_at",
-       c.id                   AS "categories.id",
-       c.parent_id            AS "categories.parent_id",
-       c.category_name        AS "categories.name",
-       c.parent_category_name AS "categories.parent_category_name",
-       te.id                  AS "transaction_evidence_id",
-       te.status              AS "transaction_evidence_status",
-       sh.status              AS "shipping_status"
-FROM   items
-       INNER JOIN users
-               ON ( items.seller_id = users.id
-                     OR items.buyer_id = users.id )
-       INNER JOIN (SELECT a.id,
-                          a.category_name,
-                          b.category_name AS parent_category_name
-                   FROM   categories AS a
-                          INNER JOIN categories AS b
-                                  ON a.parent_id = b.id)AS c
-               ON items.category_id = c.id
-       INNER JOIN transaction_evidences AS te
-               ON items.id = te.item_id
-       INNER JOIN shippings AS sh
-               ON sh.transaction_evidence_id = te.id
+SELECT *
+FROM   (SELECT items.id                   AS "id",
+               items.seller_id            AS "seller_id",
+               items.buyer_id             AS "buyer_id",
+               items.status               AS "status",
+               items.name                 AS "name",
+               items.category_id          AS "category_id",
+               items.created_at           AS "created_at",
+               seller_user.id             AS "seller_user.id",
+               seller_user.account_name   AS "seller_user.account_name",
+               seller_user.num_sell_items AS "seller_user.num_sell_items",
+               buyer_user.id              AS "buyer_user.id",
+               buyer_user.account_name    AS "buyer_user.account_name",
+               buyer_user.num_sell_items  AS "buyer_user.num_sell_items",
+               c.id                       AS "categories.id",
+               c.parent_id                AS "categories.parent_id",
+               c.category_name            AS "categories.name",
+               c.parent_category_name     AS "categories.parent_category_name",
+               te.id                      AS "transaction_evidence_id",
+               te.status                  AS "transaction_evidence_status",
+               sh.status                  AS "shipping_status"
+        FROM   items
+               LEFT JOIN (SELECT *
+                          FROM   users) AS seller_user
+                      ON items.seller_id = seller_user.id
+               LEFT JOIN (SELECT *
+                          FROM   users) AS buyer_user
+                      ON items.buyer_id = buyer_user.id
+               INNER JOIN (SELECT a.id,
+                                  a.category_name,
+                                  b.category_name AS parent_category_name,
+                                  b.id            AS parent_id
+                           FROM   categories AS a
+                                  INNER JOIN categories AS b
+                                          ON a.parent_id = b.id)AS c
+                       ON items.category_id = c.id
+               INNER JOIN transaction_evidences AS te
+                       ON items.id = te.item_id
+               INNER JOIN shippings AS sh
+                       ON sh.transaction_evidence_id = te.id) AS items
 `
 
 	tx := dbx
